@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  eureka-sd:
+    build: ./eureka-sd
+    container_name: eureka-sd
+    ports:
+      - "5050:5050"
+    networks:
+      - oceancleaner-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5050/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    ports:
+      - "5051:5051"
+    environment:
+      - EUREKA_URI=http://eureka-sd:5050/eureka
+    depends_on:
+      eureka-sd:
+        condition: service_healthy
+    networks:
+      - oceancleaner-network
+
+  operacoes-ms:
+    build: ./operacoes-ms
+    container_name: operacoes-ms
+    environment:
+      - EUREKA_URI=http://eureka-sd:5050/eureka
+      - DB_URL=jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl
+      - DB_USERNAME=RM563259
+      - DB_PASSWORD=***REMOVIDO***
+    depends_on:
+      eureka-sd:
+        condition: service_healthy
+    networks:
+      - oceancleaner-network
+
+  voluntarios-ms:
+    build: ./voluntarios-ms
+    container_name: voluntarios-ms
+    environment:
+      - EUREKA_URI=http://eureka-sd:5050/eureka
+      - DB_URL=jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl
+      - DB_USERNAME=RM563259
+      - DB_PASSWORD=***REMOVIDO***
+    depends_on:
+      eureka-sd:
+        condition: service_healthy
+    networks:
+      - oceancleaner-network
+
+networks:
+  oceancleaner-network:
+    driver: bridge
