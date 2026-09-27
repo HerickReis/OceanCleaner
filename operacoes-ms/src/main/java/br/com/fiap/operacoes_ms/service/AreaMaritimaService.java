@@ -20,9 +20,6 @@ public class AreaMaritimaService {
     private AreaMaritimaRepository repository;
 
     @Autowired
-    private AreaMaritimaRepository areaMaritimarepository;
-
-    @Autowired
     private OperacaoRepository operacaoRepository;
 
     public AreaMaritimaExibicaoDto cadastrar(AreaMaritimaDto dto) {
@@ -48,7 +45,7 @@ public class AreaMaritimaService {
     }
 
     public void deletar(Long id) {
-        if (!areaMaritimarepository.existsById(id)) {
+        if (!repository.existsById(id)) {
             throw new RecursoNaoEncontradoException(
                     "Área marítima não encontrada com id: " + id);
         }
@@ -59,7 +56,7 @@ public class AreaMaritimaService {
                             operacoes.size() + " operação(ões) vinculada(s) a ela. " +
                             "Exclua as operações primeiro.");
         }
-        areaMaritimarepository.deleteById(id);
+        repository.deleteById(id);
     }
 
     private AreaMaritimaExibicaoDto toExibicao(AreaMaritima area) {
