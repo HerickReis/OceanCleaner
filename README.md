@@ -245,10 +245,11 @@ Os testes unitários usam Mockito e não dependem de banco nem de outros serviç
 ![Pipeline](docs/prints/pipeline.png)
 
 **Aprovação manual para produção**
+
 ![Aprovação](docs/prints/aprovacao-producao.png)
 
 **Ambientes no ar (`/actuator/info`)**
-![Staging e produção](docs/prints/ambientes-info.png)
+![Staging e produção](docs/prints/ambiente-info.png)
 
 **Serviços registrados no Eureka**
 ![Eureka](docs/prints/eureka.png)
