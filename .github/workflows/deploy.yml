@@ -1,0 +1,64 @@
+name: Deploy (reutilizável)
+
+# Chamado pelo ci-cd.yml uma vez para cada ambiente (staging e production).
+# Roda num self-hosted runner (a máquina que hospeda os ambientes): copia os arquivos
+# de deploy, gera o .env a partir dos secrets e sobe a versão recém-publicada no GHCR.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      gateway-port:
+        type: number
+        required: true
+      eureka-port:
+        type: number
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy em ${{ inputs.environment }}
+    runs-on: [self-hosted, Linux]
+    environment:
+      name: ${{ inputs.environment }}
+      url: http://localhost:${{ inputs.gateway-port }}/actuator/info
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pasta fixa fora do workspace (o checkout limpa o workspace a cada execução)
+      - name: Copiar arquivos de deploy
+        run: |
+          DEPLOY_DIR="$HOME/oceancleaner-deploy/${{ inputs.environment }}"
+          echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
+          mkdir -p "$DEPLOY_DIR"
+          cp deploy/docker-compose.deploy.yml deploy/deploy.sh "$DEPLOY_DIR/"
+
+      - name: Gerar .env do ambiente (a partir dos secrets)
+        run: |
+          umask 077
+          cat > "$DEPLOY_DIR/.env" <<EOF
+          APP_ENV=${{ inputs.environment }}
+          IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}
+          IMAGE_TAG=${{ github.sha }}
+          GATEWAY_PORT=${{ inputs.gateway-port }}
+          EUREKA_PORT=${{ inputs.eureka-port }}
+          ORACLE_PASSWORD=${{ secrets.ORACLE_PASSWORD }}
+          DB_USERNAME=oceancleaner
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          API_USER=admin
+          API_PASSWORD=${{ secrets.API_PASSWORD }}
+          EOF
+
+      - name: Login no GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Executar deploy
+        run: bash "$DEPLOY_DIR/deploy.sh" ${{ inputs.environment }}
+
+      - name: Logout do GHCR
+        if: always()
+        run: docker logout ghcr.io

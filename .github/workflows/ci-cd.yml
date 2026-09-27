@@ -1,0 +1,130 @@
+name: CI/CD - Ocean Cleaner
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1) BUILD + TESTES: compila e roda os testes de cada microsserviço em paralelo
+  # ---------------------------------------------------------------------------
+  build-test:
+    name: Build e testes (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [eureka-sd, gateway, operacoes-ms, voluntarios-ms]
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: ${{ matrix.service }}/pom.xml
+
+      - name: Build e testes (mvn verify)
+        run: sh ./mvnw -B verify
+
+      - name: Resumo dos testes
+        if: always()
+        run: |
+          echo "### Testes - ${{ matrix.service }}" >> "$GITHUB_STEP_SUMMARY"
+          grep -h "Tests run:" target/surefire-reports/*.txt | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY" || echo "- nenhum relatório encontrado" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar relatórios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.service }}
+          path: ${{ matrix.service }}/target/surefire-reports/
+
+  # ---------------------------------------------------------------------------
+  # 2) DOCKER: constrói as imagens e publica no GitHub Container Registry (GHCR)
+  #    Só roda em push (não em pull request) e só se todos os testes passarem.
+  # ---------------------------------------------------------------------------
+  docker:
+    name: Imagem Docker (${{ matrix.service }})
+    needs: build-test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [eureka-sd, gateway, operacoes-ms, voluntarios-ms]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Definir nome da imagem (minúsculo, exigido pelo GHCR)
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/oceancleaner-${{ matrix.service }}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ---------------------------------------------------------------------------
+  # 3) DEPLOY STAGING: automático após as imagens serem publicadas
+  #    Os deploys rodam no self-hosted runner (ver .github/workflows/deploy.yml)
+  # ---------------------------------------------------------------------------
+  deploy-staging:
+    name: Deploy staging
+    needs: docker
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+      gateway-port: 8081
+      eureka-port: 8762
+    secrets: inherit
+
+  # ---------------------------------------------------------------------------
+  # 4) DEPLOY PRODUÇÃO: só depois do staging OK e com aprovação manual
+  #    (a aprovação é configurada no environment "production" do GitHub)
+  # ---------------------------------------------------------------------------
+  deploy-production:
+    name: Deploy produção
+    needs: deploy-staging
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      gateway-port: 8080
+      eureka-port: 8761
+    secrets: inherit

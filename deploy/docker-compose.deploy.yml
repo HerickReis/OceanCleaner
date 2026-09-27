@@ -1,0 +1,102 @@
+# Compose usado nos ambientes de staging e produção (máquina do self-hosted runner).
+# Diferente do docker-compose.yaml da raiz (desenvolvimento local), aqui as imagens
+# NÃO são construídas: são baixadas do GitHub Container Registry, já testadas pelo pipeline.
+#
+# O mesmo arquivo serve aos dois ambientes; o que muda é o .env de cada um
+# (portas, senhas, APP_ENV) e o nome do projeto (-p oceancleaner-staging / -p oceancleaner-production),
+# que isola containers, rede e volume de cada ambiente.
+
+x-java-service: &java-service
+  restart: unless-stopped
+  networks:
+    - oceancleaner-network
+
+x-java-env: &java-env
+  EUREKA_URI: http://eureka-sd:5050/eureka
+  APP_ENV: ${APP_ENV}
+  APP_VERSION: ${IMAGE_TAG}
+  # Limita a memória de cada JVM para caber os dois ambientes na mesma máquina
+  JAVA_TOOL_OPTIONS: -Xmx256m -XX:+UseSerialGC
+
+services:
+  oracle-db:
+    image: gvenzl/oracle-free:23-slim-faststart
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+      APP_USER: ${DB_USERNAME}
+      APP_USER_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    networks:
+      - oceancleaner-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+
+  eureka-sd:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY}/oceancleaner-eureka-sd:${IMAGE_TAG}
+    ports:
+      - "${EUREKA_PORT}:5050"
+    environment:
+      <<: *java-env
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5050/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  gateway:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY}/oceancleaner-gateway:${IMAGE_TAG}
+    ports:
+      - "${GATEWAY_PORT}:5051"
+    environment:
+      <<: *java-env
+    depends_on:
+      eureka-sd:
+        condition: service_healthy
+
+  operacoes-ms:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY}/oceancleaner-operacoes-ms:${IMAGE_TAG}
+    environment:
+      <<: *java-env
+      DB_URL: jdbc:oracle:thin:@oracle-db:1521/FREEPDB1
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      API_USER: ${API_USER}
+      API_PASSWORD: ${API_PASSWORD}
+    depends_on:
+      eureka-sd:
+        condition: service_healthy
+      oracle-db:
+        condition: service_healthy
+
+  voluntarios-ms:
+    <<: *java-service
+    image: ${IMAGE_REGISTRY}/oceancleaner-voluntarios-ms:${IMAGE_TAG}
+    environment:
+      <<: *java-env
+      DB_URL: jdbc:oracle:thin:@oracle-db:1521/FREEPDB1
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      API_USER: ${API_USER}
+      API_PASSWORD: ${API_PASSWORD}
+    depends_on:
+      eureka-sd:
+        condition: service_healthy
+      oracle-db:
+        condition: service_healthy
+
+volumes:
+  oracle-data:
+
+networks:
+  oceancleaner-network:
+    driver: bridge
