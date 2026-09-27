@@ -1,2 +1,7 @@
 target/
 .idea/
+
+# Variáveis de ambiente com credenciais
+.env
+.env.*
+!.env.example

@@ -1,6 +1,7 @@
 package br.com.fiap.operacoes_ms;
 
 import feign.auth.BasicAuthRequestInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,7 +9,9 @@ import org.springframework.context.annotation.Configuration;
 public class FeignConfig {
 
     @Bean
-    public BasicAuthRequestInterceptor basicAuthRequestInterceptor() {
-        return new BasicAuthRequestInterceptor("admin", "admin123");
+    public BasicAuthRequestInterceptor basicAuthRequestInterceptor(
+            @Value("${api.security.username}") String username,
+            @Value("${api.security.password}") String password) {
+        return new BasicAuthRequestInterceptor(username, password);
     }
 }

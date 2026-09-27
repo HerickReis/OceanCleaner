@@ -1,5 +1,28 @@
-version: '3.8'
 services:
+  oracle-db:
+    image: gvenzl/oracle-free:23-slim-faststart
+    container_name: oracle-db
+    ports:
+      - "1521:1521"
+    environment:
+      # Senha dos usuários administrativos (SYS/SYSTEM)
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+      # Usuário/schema da aplicação, criado automaticamente no PDB FREEPDB1
+      - APP_USER=${DB_USERNAME}
+      - APP_USER_PASSWORD=${DB_PASSWORD}
+    volumes:
+      # Persiste os dados do banco entre reinicializações do container
+      - oracle-data:/opt/oracle/oradata
+    networks:
+      - oceancleaner-network
+    healthcheck:
+      # Script já incluso na imagem que verifica se o banco aceita conexões
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
   eureka-sd:
     build: ./eureka-sd
     container_name: eureka-sd
@@ -32,11 +55,15 @@ services:
     container_name: operacoes-ms
     environment:
       - EUREKA_URI=http://eureka-sd:5050/eureka
-      - DB_URL=jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl
-      - DB_USERNAME=RM563259
-      - DB_PASSWORD=***REMOVIDO***
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - API_USER=${API_USER}
+      - API_PASSWORD=${API_PASSWORD}
     depends_on:
       eureka-sd:
+        condition: service_healthy
+      oracle-db:
         condition: service_healthy
     networks:
       - oceancleaner-network
@@ -46,14 +73,21 @@ services:
     container_name: voluntarios-ms
     environment:
       - EUREKA_URI=http://eureka-sd:5050/eureka
-      - DB_URL=jdbc:oracle:thin:@oracle.fiap.com.br:1521:orcl
-      - DB_USERNAME=RM563259
-      - DB_PASSWORD=***REMOVIDO***
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - API_USER=${API_USER}
+      - API_PASSWORD=${API_PASSWORD}
     depends_on:
       eureka-sd:
         condition: service_healthy
+      oracle-db:
+        condition: service_healthy
     networks:
       - oceancleaner-network
+
+volumes:
+  oracle-data:
 
 networks:
   oceancleaner-network:
