@@ -215,7 +215,7 @@ docker compose -p oceancleaner-staging -f docker-compose.deploy.yml down
 1. **Self-hosted runner** — *Settings → Actions → Runners → New self-hosted runner* (Linux x64). Instale em um caminho **sem espaços** (ex.: `~/actions-runner`) e inicie com `./run.sh`. A máquina precisa de Docker e de ~10 GB livres em disco.
 2. **Environments** — em *Settings → Environments*, crie:
    - `staging`
-   - `production`, com **Required reviewers** marcado
+   - `production`, com **Required reviewers** marcado (obs: para que esta opção apareça, o repositório deve estar publico, ou privado com uma assinatura do GitHub Business)
 3. **Secrets** — em cada environment, crie `ORACLE_PASSWORD`, `DB_PASSWORD` e `API_PASSWORD` (senhas diferentes por ambiente; use apenas letras e números).
 4. Faça push na `master` e acompanhe na aba **Actions**.
 
