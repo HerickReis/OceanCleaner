@@ -2,6 +2,8 @@
 
 API em microsserviços para organizar **operações de limpeza de áreas marítimas**: cadastro de áreas poluídas, planejamento de operações, gestão de voluntários e registro dos resíduos coletados.
 
+> 📘 **Documentação técnica para desenvolvedores** (classes, serviços, regras de negócio e como evoluir o projeto): [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md)
+
 O projeto conta com um pipeline de **CI/CD no GitHub Actions** que compila, testa, gera imagens Docker e faz o deploy automático em **staging** e, após aprovação manual, em **produção**.
 
 ---
@@ -233,7 +235,7 @@ cd operacoes-ms && ./mvnw verify
 | `voluntarios-ms` | `VoluntarioServiceTest`, teste de contexto |
 | `gateway`, `eureka-sd` | Teste de contexto |
 
-Os testes unitários usam Mockito e não dependem de banco nem de outros serviços. Nos microsserviços, os testes de contexto usam um banco H2 em memória (`src/test/resources/application.properties`) no lugar do Oracle.
+Os testes unitários usam Mockito e não dependem de banco nem de outros serviços. Nos microsserviços, os testes de contexto usam um banco H2 em memória (`src/test/resources/application-test.properties`) no lugar do Oracle.
 
 ---
 
