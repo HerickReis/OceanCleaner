@@ -18,6 +18,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -115,5 +117,52 @@ class OperacaoServiceTest {
         assertThatThrownBy(() -> service.deletar(9L))
                 .isInstanceOf(RecursoNaoEncontradoException.class);
         verify(operacaoRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void atualizarConcluidaSemCamposDeveFalharAntesSave() {
+        when(operacaoRepository.findById(5L)).thenReturn(Optional.of(new Operacao()));
+        when(areaMaritimaRepository.findById(1L)).thenReturn(Optional.of(area));
+
+        assertThatThrownBy(() -> service.atualizar(5L, novaOperacao("CONCLUIDA")))
+                .isInstanceOf(IllegalStateException.class);
+        verify(operacaoRepository, never()).save(any());
+        verify(voluntarioClient, never()).registrarRelatorio(any());
+    }
+
+    @Test
+    void atualizarJaConcluidaNaoDeveDuplicarRelatorio() {
+        Operacao concluida = new Operacao();
+        concluida.setStatus("CONCLUIDA");
+        when(operacaoRepository.findById(5L)).thenReturn(Optional.of(concluida));
+        when(areaMaritimaRepository.findById(1L)).thenReturn(Optional.of(area));
+        OperacaoDto dto = novaOperacao("CONCLUIDA");
+        dto.setIdVoluntario(2L);
+        dto.setQuantidadeResiduos(50);
+        dto.setTipoResiduo("Plastico");
+
+        service.atualizar(5L, dto);
+
+        verify(voluntarioClient, never()).registrarRelatorio(any());
+    }
+
+    @Test
+    void deletarBloqueiaQuandoRelatorioExiste() {
+        when(operacaoRepository.existsById(5L)).thenReturn(true);
+        when(voluntarioClient.listarPorOperacao(5L)).thenReturn(List.of(Map.of("id", 1)));
+
+        assertThatThrownBy(() -> service.deletar(5L))
+                .isInstanceOf(IllegalStateException.class);
+        verify(operacaoRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deletarOkQuandoSemRelatorio() {
+        when(operacaoRepository.existsById(5L)).thenReturn(true);
+        when(voluntarioClient.listarPorOperacao(5L)).thenReturn(List.of());
+
+        service.deletar(5L);
+
+        verify(operacaoRepository).deleteById(5L);
     }
 }
