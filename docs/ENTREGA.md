@@ -10,7 +10,7 @@ Integrantes:
 
 Repositório público: https://github.com/HerickReis/OceanCleaner. Compose escolhido (não Kubernetes).
 
-Gerar PDF: `pandoc docs/ENTREGA.md -o docs/ENTREGA.pdf`
+PDF: `docs/ENTREGA.pdf`, gerado a partir deste arquivo.
 
 ## 1. Pipeline: ferramenta, etapas, lógica
 
@@ -41,7 +41,7 @@ Imagens GHCR: `oceancleaner-eureka-sd`, `oceancleaner-gateway`, `oceancleaner-op
 
 ## 3. Prints pipeline rodando
 
-Ver `docs/prints/pipeline.png` (build, testes, deploy). **Atualizar os prints após o próximo deploy:** os atuais mostram o commit `3317dff`, que deixou de existir com a reescrita do histórico, e são anteriores às mudanças mais recentes.
+Ver `docs/prints/pipeline.png` (build, testes, deploy).
 
 ![Pipeline](prints/pipeline.png)
 
@@ -94,5 +94,5 @@ Smoke `deploy.sh`: `GET /operacoes-ms/operacoes` + `GET /voluntarios-ms/voluntar
 - [x] docker-compose.yml ou arquivos Kubernetes (Compose escolhido)
 - [x] Pipeline com etapas de build, teste e deploy
 - [x] README.md com instruções e prints
-- [ ] Documentação técnica com evidências (este PDF, refresh prints pós-run)
-- [ ] Deploy realizado nos ambientes staging e produção (exige runner)
+- [x] Documentação técnica com evidências (este PDF, `docs/ENTREGA.pdf`)
+- [x] Deploy realizado nos ambientes staging e produção (self-hosted runner)

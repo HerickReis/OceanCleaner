@@ -8,7 +8,7 @@ Integrantes:
 - Gabriel Borges Cedraz de Santana — ga.czsan@gmail.com
 - Matheus de Oliveira Radeze — radezemat@outlook.com
 - Sabrina Pires Gomes da Silva — sassadesabrina@gmail.com
-- Herick Reis Nascimentos dos Santos — herickreis90.90@gmail.com
+- Herick Reis Nascimento dos Santos — herickreis90.90@gmail.com
 
 > 📘 **Documentação técnica para desenvolvedores** (classes, serviços, regras de negócio e como evoluir o projeto): [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md)
 > 🧪 **Testes de todos os endpoints** (Postman / Insomnia): [docs/postman](docs/postman/README.md)
@@ -297,5 +297,5 @@ Os testes unitários usam Mockito e não dependem de banco nem de outros serviç
 - [x] docker-compose.yml ou arquivos Kubernetes (Compose escolhido)
 - [x] Pipeline com etapas de build, teste e deploy
 - [x] README.md com instruções e prints
-- [ ] Documentação técnica com evidências (PDF em `docs/ENTREGA.pdf`, gerar via pandoc)
-- [ ] Deploy realizado nos ambientes staging e produção (exige runner self-hosted)
+- [x] Documentação técnica com evidências ([docs/ENTREGA.pdf](docs/ENTREGA.pdf))
+- [x] Deploy realizado nos ambientes staging e produção (self-hosted runner)
