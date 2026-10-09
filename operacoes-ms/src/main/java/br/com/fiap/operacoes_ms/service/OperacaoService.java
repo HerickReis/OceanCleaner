@@ -59,12 +59,17 @@ public class OperacaoService {
         AreaMaritima area = areaMaritimaRepository.findById(dto.getIdArea())
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Área marítima não encontrada com id: " + dto.getIdArea()));
+        if ("CONCLUIDA".equalsIgnoreCase(dto.getStatus())
+                && (dto.getIdVoluntario() == null || dto.getQuantidadeResiduos() == null || dto.getTipoResiduo() == null)) {
+            throw new IllegalStateException("Conclusão exige idVoluntario, quantidadeResiduos e tipoResiduo");
+        }
+        String statusAnterior = operacao.getStatus();
         BeanUtils.copyProperties(dto, operacao);
         operacao.setId(id);
         operacao.setArea(area);
         operacaoRepository.save(operacao);
 
-        if ("CONCLUIDA".equalsIgnoreCase(dto.getStatus())) {
+        if ("CONCLUIDA".equalsIgnoreCase(dto.getStatus()) && !"CONCLUIDA".equalsIgnoreCase(statusAnterior)) {
             RelatorioColetaRequestDto relatorio = new RelatorioColetaRequestDto();
             relatorio.setIdOperacao(id);
             relatorio.setIdVoluntario(dto.getIdVoluntario());
@@ -82,11 +87,14 @@ public class OperacaoService {
             throw new RecursoNaoEncontradoException(
                     "Operação não encontrada com id: " + id);
         }
+        if (!voluntarioClient.listarPorOperacao(id).isEmpty()) {
+            throw new IllegalStateException("Não é possível excluir a operação pois existem relatórios vinculados a ela");
+        }
         operacaoRepository.deleteById(id);
     }
 
     public List<OperacaoExibicaoDto> listarPorStatus(String status) {
-        return operacaoRepository.findByStatus(status)
+        return operacaoRepository.findByStatusIgnoreCase(status)
                 .stream()
                 .map(this::toExibicao)
                 .toList();
