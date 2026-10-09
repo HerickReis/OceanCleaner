@@ -11,6 +11,7 @@ Integrantes:
 - Herick Reis Nascimentos dos Santos — herickreis90.90@gmail.com
 
 > 📘 **Documentação técnica para desenvolvedores** (classes, serviços, regras de negócio e como evoluir o projeto): [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md)
+> 🧪 **Testes de todos os endpoints** (Postman / Insomnia): [docs/postman](docs/postman/README.md)
 
 O projeto conta com um pipeline de **CI/CD no GitHub Actions** que compila, testa, gera imagens Docker e faz o deploy automático em **staging** e, após aprovação manual, em **produção**.
 
