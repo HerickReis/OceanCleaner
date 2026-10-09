@@ -1,6 +1,14 @@
-# Ocean Cleaner
+# Ocean Cleaner — Projeto ESG (Cidades ESG Inteligentes: eixo Environmental, ODS 14)
 
 API em microsserviços para organizar **operações de limpeza de áreas marítimas**: cadastro de áreas poluídas, planejamento de operações, gestão de voluntários e registro dos resíduos coletados.
+
+> Projeto Java Spring adaptado para DevOps. `Cidades ESG Inteligentes` é sugestão de tema; este repo implementa o recorte ambiental/oceânico.
+
+Integrantes:
+- Gabriel Borges Cedraz de Santana — ga.czsan@gmail.com
+- Matheus de Oliveira Radeze — radezemat@outlook.com
+- Sabrina Pires Gomes da Silva — sassadesabrina@gmail.com
+- Herick Reis Nascimentos dos Santos — herickreis90.90@gmail.com
 
 > 📘 **Documentação técnica para desenvolvedores** (classes, serviços, regras de negócio e como evoluir o projeto): [docs/DOCUMENTACAO.md](docs/DOCUMENTACAO.md)
 
@@ -9,17 +17,23 @@ O projeto conta com um pipeline de **CI/CD no GitHub Actions** que compila, test
 ---
 
 ## Sumário
+- [Projeto - Cidades ESG Inteligentes](#projeto---cidades-esg-inteligentes)
 - [Arquitetura](#arquitetura)
-- [Tecnologias](#tecnologias)
-- [Executando localmente](#executando-localmente)
+- [Tecnologias utilizadas](#tecnologias-utilizadas)
+- [Como executar localmente com Docker](#como-executar-localmente-com-docker)
 - [Endpoints da API](#endpoints-da-api)
-- [Pipeline de CI/CD](#pipeline-de-cicd)
+- [Pipeline CI/CD](#pipeline-cicd)
 - [Ambientes (staging e produção)](#ambientes-staging-e-produção)
 - [Configurando o pipeline em um novo repositório](#configurando-o-pipeline-em-um-novo-repositório)
 - [Testes](#testes)
-- [Evidências](#evidências)
+- [Containerização](#containerização)
+- [Prints do funcionamento](#prints-do-funcionamento)
 
 ---
+
+## Projeto - Cidades ESG Inteligentes
+
+Recorte ambiental: limpeza de áreas marítimas. Cobre `Environmental` via remoção de resíduos e `Social` via voluntariado. Governança via pipeline, logs e versionamento.
 
 ## Arquitetura
 
@@ -50,7 +64,7 @@ flowchart LR
 
 ---
 
-## Tecnologias
+## Tecnologias utilizadas
 
 - Java 21 · Spring Boot 4 · Spring Cloud 2025.1 (Gateway, Eureka, OpenFeign)
 - Spring Data JPA · Flyway · Oracle Database 23 Free
@@ -61,7 +75,7 @@ flowchart LR
 
 ---
 
-## Executando localmente
+## Como executar localmente com Docker
 
 **Pré-requisitos:** Docker com Docker Compose.
 
@@ -156,7 +170,7 @@ curl $GW/voluntarios-ms/relatorios/operacao/1
 
 ---
 
-## Pipeline de CI/CD
+## Pipeline CI/CD
 
 Arquivos: [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) e [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
 
@@ -231,15 +245,29 @@ cd operacoes-ms && ./mvnw verify
 
 | Serviço | Testes |
 |---|---|
-| `operacoes-ms` | `AreaMaritimaServiceTest`, `OperacaoServiceTest` (inclui a chamada Feign ao concluir operação), teste de contexto |
-| `voluntarios-ms` | `VoluntarioServiceTest`, teste de contexto |
+| `operacoes-ms` | `AreaMaritimaServiceTest`, `OperacaoServiceTest` (Feign, fail-fast, idempotência, delete), `ControllersMvcTest` (auth/validação), `OperacaoFluxoTest` (fluxo HTTP+JPA+Feign), contexto H2 |
+| `voluntarios-ms` | `VoluntarioServiceTest`, `RelatorioColetaServiceTest`, `ControllersMvcTest` (auth/validação), contexto H2 |
 | `gateway`, `eureka-sd` | Teste de contexto |
 
-Os testes unitários usam Mockito e não dependem de banco nem de outros serviços. Nos microsserviços, os testes de contexto usam um banco H2 em memória (`src/test/resources/application-test.properties`) no lugar do Oracle.
+Os testes unitários usam Mockito e não dependem de banco nem de outros serviços. Nos microsserviços, os testes de contexto usam um banco H2 em memória (`src/test/resources/application-test.properties`) no lugar do Oracle. O pipeline gera relatório JaCoCo por serviço (falha abaixo de 30%) e bloqueia o deploy em vulnerabilidades `HIGH,CRITICAL` (Trivy).
 
 ---
 
-## Evidências
+## Containerização
+
+`Dockerfile` por serviço (`eureka-sd/`, `gateway/`, `operacoes-ms/`, `voluntarios-ms/`): multi-stage `maven:3.9-eclipse-temurin-21-alpine` -> `eclipse-temurin:21-jre-alpine`, cache `pom.xml`, `USER spring` sem root. Orquestra via `docker-compose.yaml` local e `deploy/docker-compose.deploy.yml` staging/prod com volumes `oracle-data`, `oracle-backup`, rede `oceancleaner-network`, env `.env`, healthcheck + `depends_on: service_healthy`.
+
+| Req banca | Neste repo |
+|---|---|
+| `Dockerfile` | 4x `*/Dockerfile` |
+| `docker-compose.yml` | `docker-compose.yaml` + `deploy/docker-compose.deploy.yml` |
+| `src/` | 4x `*/src` |
+| `.github/workflows/` | `ci-cd.yml`, `deploy.yml` |
+| `.env.example` | raiz |
+
+---
+
+## Prints do funcionamento
 
 <!-- Adicione os prints na pasta docs/prints/ com estes nomes -->
 
@@ -258,3 +286,15 @@ Os testes unitários usam Mockito e não dependem de banco nem de outros serviç
 
 **Histórico de deploys por ambiente**
 ![Environments](docs/prints/environments.png)
+
+---
+
+## Checklist de entrega
+
+- [x] Projeto compactado em .ZIP com estrutura organizada
+- [x] Dockerfile funcional
+- [x] docker-compose.yml ou arquivos Kubernetes (Compose escolhido)
+- [x] Pipeline com etapas de build, teste e deploy
+- [x] README.md com instruções e prints
+- [ ] Documentação técnica com evidências (PDF em `docs/ENTREGA.pdf`, gerar via pandoc)
+- [ ] Deploy realizado nos ambientes staging e produção (exige runner self-hosted)
