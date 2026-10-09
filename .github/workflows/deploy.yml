@@ -19,7 +19,7 @@ on:
 jobs:
   deploy:
     name: Deploy em ${{ inputs.environment }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     environment:
       name: ${{ inputs.environment }}
       url: http://localhost:${{ inputs.gateway-port }}/actuator/info
