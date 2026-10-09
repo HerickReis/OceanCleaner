@@ -34,6 +34,11 @@ public class AreaMaritmaController {
         return ResponseEntity.ok(service.buscarPorId(id));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<AreaMaritimaExibicaoDto> atualizar(@PathVariable Long id, @RequestBody @Valid AreaMaritimaDto dto) {
+        return ResponseEntity.ok(service.atualizar(id, dto));
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletar(@PathVariable Long id) {

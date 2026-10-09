@@ -44,6 +44,15 @@ public class AreaMaritimaService {
         return toExibicao(area);
     }
 
+    public AreaMaritimaExibicaoDto atualizar(Long id, AreaMaritimaDto dto) {
+        AreaMaritima area = repository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Área marítima não encontrada com id: " + id));
+        BeanUtils.copyProperties(dto, area);
+        repository.save(area);
+        return toExibicao(area);
+    }
+
     public void deletar(Long id) {
         if (!repository.existsById(id)) {
             throw new RecursoNaoEncontradoException(
