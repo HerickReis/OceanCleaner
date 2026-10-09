@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+import feign.FeignException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -36,5 +38,12 @@ public class GlobalExceptionHandler {
         Map<String, String> erro = new HashMap<>();
         erro.put("erro", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(erro);
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<Map<String, String>> handleFeign(FeignException ex) {
+        Map<String, String> erro = new HashMap<>();
+        erro.put("erro", "Falha voluntarios-ms: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(erro);
     }
 }

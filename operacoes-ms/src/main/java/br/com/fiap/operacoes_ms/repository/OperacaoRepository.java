@@ -5,6 +5,6 @@ import java.util.List;
 
 public interface OperacaoRepository extends JpaRepository<Operacao, Long> {
     List<Operacao> findByAreaId(Long idArea);
-    List<Operacao> findByStatus(String status);
+    List<Operacao> findByStatusIgnoreCase(String status);
 }
 
