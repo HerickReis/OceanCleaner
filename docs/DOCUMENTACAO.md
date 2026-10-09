@@ -153,7 +153,7 @@ flowchart LR
 | **Service** | Regras de negócio e conversão entre DTO e entidade | Conversão com `BeanUtils.copyProperties` + método privado `toExibicao` |
 | **Repository** | Acesso a dados | Interface que estende `JpaRepository`; consultas derivadas do nome do método |
 | **Model** | Entidade JPA mapeada para a tabela | Lombok `@Data`; nomes de colunas explícitos em `@Column` |
-| **Exception** | Erros de negócio e resposta padronizada | `RecursoNaoEncontradoException` → 404; `IllegalStateException` → 409 |
+| **Exception** | Erros de negócio e resposta padronizada | `RecursoNaoEncontradoException` → 404; `IllegalStateException` → 409; `FeignException` → 502 (só no operacoes-ms) |
 
 As dependências são injetadas com `@Autowired` em atributos.
 
@@ -252,7 +252,7 @@ Os campos `idVoluntario`, `quantidadeResiduos`, `tipoResiduo` e `observacoes` do
 | Interface | Métodos além do CRUD do `JpaRepository` |
 |---|---|
 | `AreaMaritimaRepository` | — |
-| `OperacaoRepository` | `findByAreaId(Long idArea)`: operações de uma área (usado para bloquear exclusão)<br>`findByStatus(String status)`: filtro por status (comparação exata) |
+| `OperacaoRepository` | `findByAreaId(Long idArea)`: operações de uma área (usado para bloquear exclusão)<br>`findByStatusIgnoreCase(String status)`: filtro por status, sem diferenciar maiúsculas de minúsculas |
 
 ### 7.5 Services e regras de negócio
 
@@ -263,6 +263,7 @@ Os campos `idVoluntario`, `quantidadeResiduos`, `tipoResiduo` e `observacoes` do
 | `cadastrar(dto)` | Copia o DTO para a entidade, define `dataCadastro = hoje` e salva | — |
 | `listar()` | Retorna todas as áreas | — |
 | `buscarPorId(id)` | Retorna uma área | 404 se não existir |
+| `atualizar(id, dto)` | Sobrescreve nome, descrição, localização e nível de poluição; mantém `id` e `dataCadastro` | 404 se não existir |
 | `deletar(id)` | Exclui a área **somente se não houver operações vinculadas** | 404 se não existir; **409** se houver operações |
 
 **`OperacaoService`**
@@ -272,15 +273,15 @@ Os campos `idVoluntario`, `quantidadeResiduos`, `tipoResiduo` e `observacoes` do
 | `cadastrar(dto)` | Busca a área por `idArea`, vincula e salva a operação | 404 se a área não existir |
 | `listar()` | Retorna todas as operações, com `idArea` e `nomeArea` | — |
 | `buscarPorId(id)` | Retorna uma operação | 404 se não existir |
-| `atualizar(id, dto)` | Atualiza todos os campos e a área. **Se o novo status for `CONCLUIDA`** (ignora maiúsculas/minúsculas), chama o `voluntarios-ms` para registrar o relatório de coleta | 404 se a operação ou a área não existirem; erro da chamada Feign (ver [seção 9](#9-comunicação-entre-serviços-feign)) |
-| `deletar(id)` | Exclui a operação | 404 se não existir |
-| `listarPorStatus(status)` | Filtra por status (comparação exata, sensível a maiúsculas) | — |
+| `atualizar(id, dto)` | Atualiza todos os campos e a área. **Se a operação passar para `CONCLUIDA`** (ignora maiúsculas/minúsculas) e ainda não estava concluída, chama o `voluntarios-ms` para registrar o relatório de coleta. Concluir exige `idVoluntario`, `quantidadeResiduos` e `tipoResiduo` | 404 se a operação ou a área não existirem; **409** se faltar campo de conclusão; **502** se a chamada Feign falhar (ver [seção 9](#9-comunicação-entre-serviços-feign)) |
+| `deletar(id)` | Exclui a operação **somente se não houver relatórios dela no `voluntarios-ms`** (consulta via Feign) | 404 se não existir; **409** se houver relatórios; **502** se o `voluntarios-ms` não responder |
+| `listarPorStatus(status)` | Filtra por status, sem diferenciar maiúsculas de minúsculas | — |
 
 ### 7.6 Cliente HTTP (`http`)
 
 | Interface | Descrição |
 |---|---|
-| `VoluntarioClient` | `@FeignClient(name = "voluntarios-ms")`. Método `registrarRelatorio(RelatorioColetaRequestDto)` → `POST /relatorios`. O nome é resolvido pelo Eureka, sem URL fixa. |
+| `VoluntarioClient` | `@FeignClient(name = "voluntarios-ms")`. O nome é resolvido pelo Eureka, sem URL fixa.<br>`registrarRelatorio(RelatorioColetaRequestDto)` → `POST /relatorios`: cria o relatório ao concluir uma operação.<br>`listarPorOperacao(Long idOperacao)` → `GET /relatorios/operacao/{idOperacao}`: usado para bloquear a exclusão de operações com relatórios. Retorna `List<Map<String, Object>>`, sem DTO próprio. |
 
 ### 7.7 Controllers e endpoints
 
@@ -293,9 +294,8 @@ Prefixo pelo Gateway: `/operacoes-ms`.
 | POST | `/areas-maritimas` | `cadastrar` | 201 |
 | GET | `/areas-maritimas` | `listar` | 200 |
 | GET | `/areas-maritimas/{id}` | `buscarPorId` | 200 |
+| PUT | `/areas-maritimas/{id}` | `atualizar` | 200 |
 | DELETE | `/areas-maritimas/{id}` | `deletar` | 204 |
-
-Não existe endpoint de atualização (PUT) para áreas.
 
 **`OperacoesController`** — `/operacoes`
 
@@ -329,7 +329,7 @@ Gerencia **voluntários** e os **relatórios de coleta** de resíduos. Recebe ch
 |---|---|---|---|---|
 | `id` | `ID_VOLUNTARIO` | Long | — | Gerado pelo banco |
 | `nome` | `NOME` | String(100) | sim | |
-| `email` | `EMAIL` | String(100) | sim | Validado como e-mail; **não é único** |
+| `email` | `EMAIL` | String(100) | sim | Validado como e-mail; **único**, verificado pelo service (não há restrição no banco) |
 | `telefone` | `TELEFONE` | String(20) | não | |
 | `especialidade` | `ESPECIALIDADE` | String(100) | não | |
 | `dataCadastro` | `DATA_CADASTRO` | LocalDate | — | Preenchida pelo service |
@@ -361,7 +361,7 @@ Gerencia **voluntários** e os **relatórios de coleta** de resíduos. Recebe ch
 
 | Interface | Métodos além do CRUD |
 |---|---|
-| `VoluntarioRepository` | — |
+| `VoluntarioRepository` | `findByEmail(String email)`: usado para impedir e-mails duplicados |
 | `RelatorioColetaRepository` | `findByIdOperacao(Long)`: relatórios de uma operação<br>`findByVoluntarioId(Long)`: relatórios de um voluntário (navega pela relação `voluntario.id`) |
 
 ### 8.5 Services e regras de negócio
@@ -370,9 +370,9 @@ Gerencia **voluntários** e os **relatórios de coleta** de resíduos. Recebe ch
 
 | Método | O que faz | Erros |
 |---|---|---|
-| `cadastrar(dto)` | Salva com `dataCadastro = hoje` | — |
+| `cadastrar(dto)` | Verifica se o e-mail já existe e salva com `dataCadastro = hoje` | **409** se o e-mail já estiver cadastrado |
 | `listar()` / `buscarPorId(id)` | Consulta | 404 se não existir |
-| `atualizar(id, dto)` | Sobrescreve nome, e-mail, telefone e especialidade; mantém `dataCadastro` | 404 se não existir |
+| `atualizar(id, dto)` | Sobrescreve nome, e-mail, telefone e especialidade; mantém `dataCadastro`. O e-mail não pode pertencer a outro voluntário | 404 se não existir; **409** se o e-mail for de outro voluntário |
 | `deletar(id)` | Exclui **somente se não houver relatórios vinculados** | 404; **409** se houver relatórios |
 
 **`RelatorioColetaService`**
@@ -429,12 +429,15 @@ sequenceDiagram
 Passo a passo em `OperacaoService.atualizar`:
 
 1. Busca a operação e a área (404 se alguma não existir).
-2. Copia os dados do DTO e **salva a operação**.
-3. Se `status` for `CONCLUIDA`, monta um `RelatorioColetaRequestDto` com `idOperacao = id` e os campos de coleta do DTO.
-4. Chama `voluntarioClient.registrarRelatorio(...)`. O Feign resolve o endereço pelo Eureka e o `FeignConfig` adiciona a autenticação.
-5. No `voluntarios-ms`, o `RelatorioColetaDto` é validado. `idVoluntario`, `quantidadeResiduos` e `tipoResiduo` são obrigatórios e o voluntário precisa existir.
+2. Se o novo status for `CONCLUIDA`, verifica se `idVoluntario`, `quantidadeResiduos` e `tipoResiduo` foram enviados. Se faltar algum, responde **409 antes de salvar qualquer coisa**.
+3. Guarda o status anterior, copia os dados do DTO e **salva a operação**.
+4. Só se a operação **passou** para `CONCLUIDA` (o status anterior era outro), monta um `RelatorioColetaRequestDto` com `idOperacao = id` e os campos de coleta. Enviar `CONCLUIDA` de novo para uma operação já concluída não gera outro relatório.
+5. Chama `voluntarioClient.registrarRelatorio(...)`. O Feign resolve o endereço pelo Eureka e o `FeignConfig` adiciona a autenticação.
+6. No `voluntarios-ms`, o `RelatorioColetaDto` é validado e o voluntário precisa existir.
 
-**Comportamento em caso de falha:** a operação é salva **antes** da chamada Feign e não há transação envolvendo as duas etapas. Se a chamada falhar (voluntário inexistente, campo faltando, `voluntarios-ms` fora do ar), o cliente recebe erro (500, porque a `FeignException` não é tratada), mas **a operação já ficou gravada como `CONCLUIDA` sem relatório**. Ao concluir uma operação, envie sempre `idVoluntario`, `quantidadeResiduos` e `tipoResiduo`.
+**Comportamento em caso de falha:** a operação é salva **antes** da chamada Feign e não há transação envolvendo as duas etapas. Se a chamada falhar (voluntário inexistente, `voluntarios-ms` fora do ar), o cliente recebe **502**, mas **a operação já ficou gravada como `CONCLUIDA` sem relatório**. E como ela já está concluída, reenviar o `PUT` não tenta criar o relatório de novo (ver [seção 16](#16-pontos-de-atenção-conhecidos)).
+
+**Exclusão de operação:** `OperacaoService.deletar` também usa o Feign (`listarPorOperacao`) para confirmar que a operação não tem relatórios antes de excluí-la. Se o `voluntarios-ms` estiver fora do ar, a exclusão falha com 502.
 
 ---
 
@@ -529,8 +532,9 @@ Cada microsserviço tem um `GlobalExceptionHandler` (`@RestControllerAdvice`) qu
 |---|---|---|---|
 | `RecursoNaoEncontradoException` | ID inexistente | **404** | `{"erro": "Operação não encontrada com id: 7"}` |
 | `MethodArgumentNotValidException` | Falha no `@Valid` do DTO | **400** | `{"titulo": "Título é obrigatório", "idArea": "ID da área é obrigatório"}` (um item por campo) |
-| `IllegalStateException` | Regra de negócio violada (exclusão bloqueada) | **409** | `{"erro": "Não é possível excluir a área marítima pois existem 2 operação(ões) vinculada(s) a ela. ..."}` |
-| Qualquer outra | Erro inesperado, falha Feign, JSON malformado | 500 / 400 | Resposta padrão do Spring Boot |
+| `IllegalStateException` | Regra de negócio violada (exclusão bloqueada, e-mail duplicado, conclusão sem os campos de coleta) | **409** | `{"erro": "Não é possível excluir a área marítima pois existem 2 operação(ões) vinculada(s) a ela. ..."}` |
+| `FeignException` (só no `operacoes-ms`) | Falha ao chamar o `voluntarios-ms` | **502** | `{"erro": "Falha voluntarios-ms: ..."}` |
+| Qualquer outra | Erro inesperado, JSON malformado | 500 / 400 | Resposta padrão do Spring Boot |
 
 Para um novo erro de negócio, crie uma exceção específica e um `@ExceptionHandler` no `GlobalExceptionHandler`, ou reaproveite as existentes.
 
@@ -548,6 +552,7 @@ Para um novo erro de negócio, crie uma exceção específica e um `@ExceptionHa
 | `ORACLE_PASSWORD` | oracle-db | Senha do administrador do banco |
 | `API_USER` / `API_PASSWORD` | operacoes-ms, voluntarios-ms | Credenciais HTTP Basic (e das chamadas Feign) |
 | `APP_ENV` / `APP_VERSION` | gateway | Exibidos em `/actuator/info` |
+| `SHOW_SQL` | operacoes-ms, voluntarios-ms | `true` mostra o SQL no log (padrão `false`) |
 
 Localmente, as variáveis ficam no `.env` (copiado de `.env.example`), lido pelo `docker-compose.yaml`. No deploy, o pipeline gera o `.env` a partir dos secrets do GitHub.
 
@@ -559,7 +564,7 @@ Localmente, as variáveis ficam no `.env` (copiado de `.env.example`), lido pelo
 | `eureka.instance.prefer-ip-address` | `true` | Registra o IP do container, não o hostname |
 | `eureka.instance.instance-id` | `${spring.application.name}:${random.int}` | Permite várias instâncias do mesmo serviço |
 | `spring.jpa.hibernate.ddl-auto` | `none` | Schema controlado só pelo Flyway |
-| `spring.jpa.show-sql` | `true` | Mostra o SQL no log (útil em desenvolvimento) |
+| `spring.jpa.show-sql` | `${SHOW_SQL:false}` | Desligado por padrão; defina `SHOW_SQL=true` para ver o SQL no log durante o desenvolvimento |
 | `spring.flyway.baselineOnMigrate` | `true` | Permite rodar em um schema que já tem objetos |
 
 ### Rodando um serviço fora do Docker (na IDE)
@@ -583,13 +588,16 @@ cd operacoes-ms && ./mvnw test
 | Classe | Tipo | O que cobre |
 |---|---|---|
 | `AreaMaritimaServiceTest` | Unitário (Mockito) | Cadastro com data, listagem, 404, bloqueio de exclusão com operações, exclusão |
-| `OperacaoServiceTest` | Unitário (Mockito) | Vínculo com área, 404 de área, **chamada Feign ao concluir**, ausência de chamada quando não conclui, 404 na exclusão |
+| `OperacaoServiceTest` | Unitário (Mockito) | Vínculo com área, 404 de área, **chamada Feign ao concluir**, 409 ao concluir sem os campos de coleta, ausência de relatório duplicado, bloqueio de exclusão com relatórios, exclusão |
 | `VoluntarioServiceTest` | Unitário (Mockito) | Cadastro com data, busca, 404, bloqueio de exclusão com relatórios, exclusão |
-| `*ApplicationTests` (4 serviços) | Contexto Spring | Verifica que a aplicação sobe com a configuração correta |
+| `RelatorioColetaServiceTest` | Unitário (Mockito) | Vínculo com voluntário, 404 de voluntário e de relatório, listagem por operação, exclusão |
+| `ControllersMvcTest` (nos dois microsserviços) | Web (`@WebMvcTest` + MockMvc) | Status HTTP dos endpoints: GET público (200), escrita sem login (401), com login (201), entrada inválida (400), recurso inexistente (404) |
+| `OperacaoFluxoTest` | Integração (`@SpringBootTest` + MockMvc + H2) | Fluxo completo: cria área e operação, conclui (com o `VoluntarioClient` simulado), verifica o relatório e a exclusão |
+| `*ApplicationTests` (4 serviços) | Contexto Spring | Verifica que a aplicação sobe com a configuração correta. No `eureka-sd`, `applicationStarts()` também executa o `main()` para contar na cobertura |
 
 - Os testes unitários usam `@Mock` nos repositórios e no `VoluntarioClient`: não precisam de banco nem de outros serviços.
-- Os testes de contexto dos microsserviços usam `src/test/resources/application-test.properties` (perfil `test`, ativado com `@ActiveProfiles("test")`), que troca o Oracle por **H2 em memória**, desliga o Flyway (as migrations usam sintaxe Oracle) e desativa o Eureka.
-- `RelatorioColetaService` e os controllers ainda não têm testes. São bons candidatos para os próximos.
+- Os testes de contexto e de integração usam `src/test/resources/application-test.properties` (perfil `test`, ativado com `@ActiveProfiles("test")`), que troca o Oracle por **H2 em memória**, desliga o Flyway (as migrations usam sintaxe Oracle) e desativa o Eureka.
+- **Cobertura:** o pipeline mede a cobertura com o **JaCoCo** e reprova o build de um serviço se ela ficar **abaixo de 30% das linhas**. O percentual aparece no resumo da execução no GitHub.
 
 Os testes rodam automaticamente no pipeline a cada push e pull request.
 
@@ -632,11 +640,9 @@ Comportamentos atuais do código que quem for evoluir o projeto deve conhecer:
 
 | Ponto | Detalhe | Onde |
 |---|---|---|
-| Conclusão sem transação distribuída | A operação é salva antes da chamada Feign; se a chamada falhar, fica `CONCLUIDA` sem relatório e o cliente recebe 500 | `OperacaoService.atualizar` |
-| Relatórios duplicados | Enviar `PUT` com `CONCLUIDA` mais de uma vez gera um novo relatório a cada chamada | `OperacaoService.atualizar` |
-| Falha Feign vira 500 | `FeignException` não tem tratamento no `GlobalExceptionHandler`; erros 400/404 do `voluntarios-ms` chegam ao cliente como 500 | `operacoes-ms/exception` |
-| Relatórios órfãos | Excluir uma operação não remove os relatórios dela no `voluntarios-ms` (não há FK entre serviços) | `OperacaoService.deletar` |
-| Status livre | `status` é texto livre, sem enum. A conclusão compara ignorando maiúsculas; o filtro `/status/{status}` compara exatamente | `Operacao`, `OperacaoRepository` |
-| Áreas sem atualização | Não há `PUT /areas-maritimas/{id}` | `AreaMaritmaController` |
-| E-mail não único | É possível cadastrar dois voluntários com o mesmo e-mail | `Voluntario`, migration |
+| Conclusão sem transação distribuída | A operação é salva antes da chamada Feign. Se a chamada falhar (por exemplo, voluntário inexistente ou `voluntarios-ms` fora do ar), ela fica `CONCLUIDA` sem relatório e o cliente recebe 502. Como a proteção contra duplicidade compara com o status anterior, **reenviar o `PUT` não cria o relatório**: é preciso voltar o status para outro valor e concluir de novo, ou criar o relatório direto em `POST /voluntarios-ms/relatorios` | `OperacaoService.atualizar` |
+| Exclusão depende do outro serviço | Excluir uma operação consulta o `voluntarios-ms`; se ele estiver fora do ar, a exclusão falha com 502 | `OperacaoService.deletar` |
+| Mensagem de erro do Feign | A resposta 502 inclui a mensagem completa da `FeignException`, que pode trazer detalhes internos (URL e corpo da resposta do `voluntarios-ms`) | `operacoes-ms/exception/GlobalExceptionHandler` |
+| E-mail único só na aplicação | A unicidade é verificada no service, sem restrição `UNIQUE` no banco. Duas requisições simultâneas com o mesmo e-mail ainda podem passar | `VoluntarioService`, migration |
+| Status livre | `status` é texto livre, sem enum. Qualquer valor diferente de `CONCLUIDA` é aceito | `Operacao` |
 | Nomes com erro de digitação | `AreaMaritmaController` (falta um "i") e o pacote `br.com.oceanclener` no eureka-sd. Renomear exige ajustar imports e o pacote dos testes | — |
