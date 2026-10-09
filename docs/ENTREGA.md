@@ -3,12 +3,12 @@
 Projeto ESG ambiental (ODS 14): limpeza de áreas marítimas, voluntariado, relatórios de coleta.
 
 Integrantes:
-- Gabriel Borges Cedraz de Santana — ga.czsan@gmail.com
-- Matheus de Oliveira Radeze — radezemat@outlook.com
-- Sabrina Pires Gomes da Silva — sassadesabrina@gmail.com
-- Herick Reis Nascimentos dos Santos — herickreis90.90@gmail.com
+- Gabriel Borges Cedraz de Santana (RM565911) — ga.czsan@gmail.com
+- Matheus de Oliveira Radeze (RM563613) — radezemat@outlook.com
+- Sabrina Pires Gomes da Silva (RM563670) — sassadesabrina@gmail.com
+- Herick Reis Nascimento dos Santos (RM563259) — herickreis90.90@gmail.com
 
-Repo privado. Compose escolhido (não Kubernetes).
+Repositório público: https://github.com/HerickReis/OceanCleaner. Compose escolhido (não Kubernetes).
 
 Gerar PDF: `pandoc docs/ENTREGA.md -o docs/ENTREGA.pdf`
 
@@ -18,7 +18,7 @@ Ferramenta: GitHub Actions + GHCR + self-hosted runner Linux.
 
 Arquivos: `.github/workflows/ci-cd.yml`, `.github/workflows/deploy.yml`, `deploy/deploy.sh`, `deploy/docker-compose.deploy.yml`.
 
-Fluxo: push `master` -> Build/test matrix 4 svcs (`mvn verify`, JaCoCo 30%, Trivy HIGH,CRITICAL block) -> Docker build/push GHCR `:<sha>` + `:latest` -> Deploy staging auto (`:8081`/`:8762`) smoke `200` -> Aprovação manual -> Deploy produção (`:8080`/`:8761`).
+Fluxo: push `master` -> Build/test matrix 4 svcs (`mvn verify`, JaCoCo 30%, scan Trivy HIGH,CRITICAL apenas informativo, não bloqueia) -> Docker build/push GHCR `:<sha>` + `:latest` -> Deploy staging auto (`:8081`/`:8762`) smoke `200` -> Aprovação manual -> Deploy produção (`:8080`/`:8761`).
 
 PR roda só build/test. Imagens rastreadas por SHA em `/actuator/info` (`APP_VERSION`).
 
@@ -41,7 +41,7 @@ Imagens GHCR: `oceancleaner-eureka-sd`, `oceancleaner-gateway`, `oceancleaner-op
 
 ## 3. Prints pipeline rodando
 
-Ver `docs/prints/pipeline.png` (build, testes, deploy). Atualizar após run verde pós-commit.
+Ver `docs/prints/pipeline.png` (build, testes, deploy). **Atualizar os prints após o próximo deploy:** os atuais mostram o commit `3317dff`, que deixou de existir com a reescrita do histórico, e são anteriores às mudanças mais recentes.
 
 ![Pipeline](prints/pipeline.png)
 
@@ -59,9 +59,11 @@ Histórico envs: `prints/environments.png`.
 
 ![Ambientes](prints/ambiente-info.png)
 
-Eureka 4 instâncias: `prints/eureka.png`.
+Eureka com os 3 serviços registrados (gateway, operacoes-ms, voluntarios-ms): `prints/eureka.png`.
 
 ![Eureka](prints/eureka.png)
+
+Testes manuais de todos os endpoints: coleção Postman/Insomnia em `docs/postman/` (ver `docs/postman/README.md`).
 
 Smoke `deploy.sh`: `GET /operacoes-ms/operacoes` + `GET /voluntarios-ms/voluntarios` = `200` via Gateway, senão logs + rollback `.deployed_tag`.
 
@@ -78,8 +80,12 @@ Smoke `deploy.sh`: `GET /operacoes-ms/operacoes` + `GET /voluntarios-ms/voluntar
 | Delete órfão | bloqueia delete operação/voluntário/área com filhos `409` |
 | Email duplicado | `findByEmail` + `409` |
 | `status` case | `findByStatusIgnoreCase` |
-| Repo privado sem Business | prod via `workflow_dispatch` manual, documentado |
-| Sem runner | setup `~/actions-runner` sem espaços, Docker+10GB |
+| Aprovação manual (Required reviewers) indisponível em repo privado no plano gratuito | repositório tornado público; aprovação pelo environment `production` |
+| Azure for Students sem capacidade para 2 ambientes (2 Oracle + 8 JVMs) | deploy em máquina própria com self-hosted runner |
+| Deploy em `ubuntu-latest` não fica acessível (VM temporária) | deploy mantido no self-hosted runner |
+| Runner em caminho com espaço quebrava o bash dos jobs | runner movido para `~/actions-runner` |
+| Credenciais antigas no histórico do Git (repo público) | histórico reescrito com `git filter-repo` e `push --force` |
+| Sem runner | setup `~/actions-runner`, Docker e ~10 GB livres |
 
 ## 6. Checklist de entrega
 

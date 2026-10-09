@@ -1,0 +1,1565 @@
+{
+  "info": {
+    "name": "Ocean Cleaner API",
+    "description": "Testes de todos os endpoints do Ocean Cleaner, chamados pelo Gateway.\n\n**Como usar**\n1. Importe esta coleção e um dos arquivos de ambiente (local, staging ou produção).\n2. No ambiente, preencha `apiPassword` com o valor de `API_PASSWORD`.\n3. Execute a coleção inteira, na ordem, pelo *Collection Runner*: cada requisição guarda os IDs criados para as seguintes e a última pasta apaga os dados de teste.\n\nGET é público; POST, PUT e DELETE usam a autenticação Basic configurada na coleção.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{apiUser}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{apiPassword}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Identificador da execução, para gerar e-mails únicos a cada rodada",
+          "if (!pm.collectionVariables.get(\"runId\")) {",
+          "  pm.collectionVariables.set(\"runId\", Date.now().toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "areaId",
+      "value": ""
+    },
+    {
+      "key": "voluntarioId",
+      "value": ""
+    },
+    {
+      "key": "operacaoId",
+      "value": ""
+    },
+    {
+      "key": "relatorioId",
+      "value": ""
+    },
+    {
+      "key": "relatorioExtraId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Saúde do ambiente",
+      "description": "Confirma que o ambiente está no ar e qual versão está rodando.",
+      "item": [
+        {
+          "name": "Info do ambiente (Gateway)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/info",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "info"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Informa ambiente e versão\", () => {",
+                  "  const app = pm.response.json().app;",
+                  "  pm.expect(app.environment).to.be.a(\"string\");",
+                  "  pm.expect(app.version).to.be.a(\"string\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health (Gateway)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Status UP\", () => pm.expect(pm.response.json().status).to.eql(\"UP\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Áreas marítimas",
+      "description": "operacoes-ms — /areas-maritimas",
+      "item": [
+        {
+          "name": "Cadastrar área",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Praia do Gonzaga\",\n  \"descricao\": \"Faixa de areia com acúmulo de plástico\",\n  \"localizacao\": \"Santos - SP\",\n  \"nivelPoluicao\": \"ALTO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"areaId\", pm.response.json().id);",
+                  "pm.test(\"Preenche dataCadastro\", () => pm.expect(pm.response.json().dataCadastro).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar áreas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar área por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas/{{areaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas",
+                "{{areaId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atualizar área",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas/{{areaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas",
+                "{{areaId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Praia do Gonzaga\",\n  \"descricao\": \"Faixa de areia com acúmulo de plástico\",\n  \"localizacao\": \"Santos - SP\",\n  \"nivelPoluicao\": \"MEDIO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Nível atualizado\", () => pm.expect(pm.response.json().nivelPoluicao).to.eql(\"MEDIO\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar área inválida (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"sem nome\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Lista campos inválidos\", () => pm.expect(pm.response.json()).to.have.property(\"nome\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar área inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas",
+                "999999"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Voluntários",
+      "description": "voluntarios-ms — /voluntarios",
+      "item": [
+        {
+          "name": "Cadastrar voluntário",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Ana Souza\",\n  \"email\": \"ana.{{runId}}@email.com\",\n  \"telefone\": \"13999990000\",\n  \"especialidade\": \"Mergulho\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"voluntarioId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar e-mail duplicado (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Ana Souza\",\n  \"email\": \"ana.{{runId}}@email.com\",\n  \"telefone\": \"13999990000\",\n  \"especialidade\": \"Mergulho\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar voluntário inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"\",\n  \"email\": \"email-invalido\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar sem autenticação (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Ana Souza\",\n  \"email\": \"ana.{{runId}}@email.com\",\n  \"telefone\": \"13999990000\",\n  \"especialidade\": \"Mergulho\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar voluntários",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar voluntário por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios/{{voluntarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios",
+                "{{voluntarioId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atualizar voluntário",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios/{{voluntarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios",
+                "{{voluntarioId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Ana Souza\",\n  \"email\": \"ana.{{runId}}@email.com\",\n  \"telefone\": \"13999990000\",\n  \"especialidade\": \"Logística\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Operações",
+      "description": "operacoes-ms — /operacoes",
+      "item": [
+        {
+          "name": "Cadastrar operação",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Mutirão Gonzaga\",\n  \"descricao\": \"Limpeza da faixa de areia\",\n  \"dataOperacao\": \"2026-10-20\",\n  \"status\": \"PLANEJADA\",\n  \"idArea\": {{areaId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"operacaoId\", pm.response.json().id);",
+                  "pm.test(\"Vinculada à área\", () => pm.expect(pm.response.json().idArea).to.eql(Number(pm.collectionVariables.get(\"areaId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar sem autenticação (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Mutirão Gonzaga\",\n  \"descricao\": \"Limpeza da faixa de areia\",\n  \"dataOperacao\": \"2026-10-20\",\n  \"status\": \"PLANEJADA\",\n  \"idArea\": {{areaId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar com área inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Mutirão Gonzaga\",\n  \"descricao\": \"Limpeza da faixa de areia\",\n  \"dataOperacao\": \"2026-10-20\",\n  \"status\": \"PLANEJADA\",\n  \"idArea\": 999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar operações",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar operação por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "{{operacaoId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar por status (sem diferenciar maiúsculas)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/status/planejada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "status",
+                "planejada"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Encontra a operação criada\", () => {",
+                  "  const id = Number(pm.collectionVariables.get(\"operacaoId\"));",
+                  "  pm.expect(pm.response.json().map(o => o.id)).to.include(id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Conclusão e relatório (Feign)",
+      "description": "Concluir uma operação faz o operacoes-ms chamar o voluntarios-ms e criar o relatório de coleta.",
+      "item": [
+        {
+          "name": "Concluir sem dados de coleta (409)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "{{operacaoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Mutirão Gonzaga\",\n  \"descricao\": \"Limpeza da faixa de areia\",\n  \"dataOperacao\": \"2026-10-20\",\n  \"status\": \"CONCLUIDA\",\n  \"idArea\": {{areaId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Concluir operação",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "{{operacaoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Mutirão Gonzaga\",\n  \"descricao\": \"Limpeza da faixa de areia\",\n  \"dataOperacao\": \"2026-10-20\",\n  \"status\": \"CONCLUIDA\",\n  \"idArea\": {{areaId}},\n  \"idVoluntario\": {{voluntarioId}},\n  \"quantidadeResiduos\": 120,\n  \"tipoResiduo\": \"Plástico\",\n  \"observacoes\": \"Garrafas PET e redes de pesca\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Status CONCLUIDA\", () => pm.expect(pm.response.json().status).to.eql(\"CONCLUIDA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Relatório criado automaticamente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios/operacao/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios",
+                "operacao",
+                "{{operacaoId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const lista = pm.response.json();",
+                  "pm.test(\"Exatamente um relatório\", () => pm.expect(lista.length).to.eql(1));",
+                  "pm.test(\"Dados vindos da operação\", () => {",
+                  "  pm.expect(lista[0].quantidadeResiduos).to.eql(120);",
+                  "  pm.expect(lista[0].nomeVoluntario).to.eql(\"Ana Souza\");",
+                  "});",
+                  "pm.collectionVariables.set(\"relatorioId\", lista[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Concluir de novo (não duplica)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "{{operacaoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Mutirão Gonzaga\",\n  \"descricao\": \"Limpeza da faixa de areia\",\n  \"dataOperacao\": \"2026-10-20\",\n  \"status\": \"CONCLUIDA\",\n  \"idArea\": {{areaId}},\n  \"idVoluntario\": {{voluntarioId}},\n  \"quantidadeResiduos\": 120,\n  \"tipoResiduo\": \"Plástico\",\n  \"observacoes\": \"Garrafas PET e redes de pesca\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Continua com um relatório",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios/operacao/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios",
+                "operacao",
+                "{{operacaoId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Sem duplicidade\", () => pm.expect(pm.response.json().length).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Relatórios de coleta",
+      "description": "voluntarios-ms — /relatorios",
+      "item": [
+        {
+          "name": "Listar relatórios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar relatório por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios/{{relatorioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios",
+                "{{relatorioId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Relatórios do voluntário",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios/voluntario/{{voluntarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios",
+                "voluntario",
+                "{{voluntarioId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar relatório manualmente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idOperacao\": {{operacaoId}},\n  \"idVoluntario\": {{voluntarioId}},\n  \"quantidadeResiduos\": 15,\n  \"tipoResiduo\": \"Metal\",\n  \"observacoes\": \"Coleta complementar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"relatorioExtraId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar com voluntário inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idOperacao\": {{operacaoId}},\n  \"idVoluntario\": 999999,\n  \"quantidadeResiduos\": 1,\n  \"tipoResiduo\": \"Vidro\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Exclusões bloqueadas (409)",
+      "description": "Regras que impedem apagar registros que ainda têm vínculos.",
+      "item": [
+        {
+          "name": "Excluir área com operação",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas/{{areaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas",
+                "{{areaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir operação com relatório",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "{{operacaoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir voluntário com relatório",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios/{{voluntarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios",
+                "{{voluntarioId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Limpeza",
+      "description": "Apaga os dados criados, na ordem que as regras permitem.",
+      "item": [
+        {
+          "name": "Excluir relatório extra",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios/{{relatorioExtraId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios",
+                "{{relatorioExtraId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir relatório",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/relatorios/{{relatorioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "relatorios",
+                "{{relatorioId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir operação",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "{{operacaoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Operação não existe mais (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/operacoes/{{operacaoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "operacoes",
+                "{{operacaoId}}"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir área",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/operacoes-ms/areas-maritimas/{{areaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "operacoes-ms",
+                "areas-maritimas",
+                "{{areaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir voluntário",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/voluntarios-ms/voluntarios/{{voluntarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "voluntarios-ms",
+                "voluntarios",
+                "{{voluntarioId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));",
+                  "pm.collectionVariables.unset(\"runId\");"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
