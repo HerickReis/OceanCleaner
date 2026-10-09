@@ -25,6 +25,9 @@ public class VoluntarioService {
     private RelatorioColetaRepository relatorioRepository;
 
     public VoluntarioExibicaoDto cadastrar(VoluntarioDto dto) {
+        repository.findByEmail(dto.getEmail()).ifPresent(v -> {
+            throw new IllegalStateException("E-mail já cadastrado: " + dto.getEmail());
+        });
         Voluntario voluntario = new Voluntario();
         BeanUtils.copyProperties(dto, voluntario);
         voluntario.setDataCadastro(LocalDate.now());
@@ -50,6 +53,11 @@ public class VoluntarioService {
         Voluntario voluntario = repository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Voluntário não encontrado com id: " + id));
+        repository.findByEmail(dto.getEmail()).ifPresent(v -> {
+            if (!v.getId().equals(id)) {
+                throw new IllegalStateException("E-mail já cadastrado: " + dto.getEmail());
+            }
+        });
         BeanUtils.copyProperties(dto, voluntario);
         voluntario.setId(id);
         repository.save(voluntario);
