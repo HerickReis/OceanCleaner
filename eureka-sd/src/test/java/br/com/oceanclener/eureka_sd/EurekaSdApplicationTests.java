@@ -10,4 +10,9 @@ class EurekaSdApplicationTests {
 	void contextLoads() {
 	}
 
+	@Test
+	void applicationStarts() {
+		EurekaSdApplication.main(new String[]{"--server.port=0"});
+	}
+
 }
