@@ -28,6 +28,7 @@ services:
       APP_USER_PASSWORD: ${DB_PASSWORD}
     volumes:
       - oracle-data:/opt/oracle/oradata
+      - oracle-backup:/backup
     networks:
       - oceancleaner-network
     healthcheck:
@@ -58,6 +59,12 @@ services:
       - "${GATEWAY_PORT}:5051"
     environment:
       <<: *java-env
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5051/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     depends_on:
       eureka-sd:
         condition: service_healthy
@@ -96,6 +103,7 @@ services:
 
 volumes:
   oracle-data:
+  oracle-backup:
 
 networks:
   oceancleaner-network:

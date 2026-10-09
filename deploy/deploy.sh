@@ -12,6 +12,7 @@ set -a; source .env; set +a
 
 PROJETO="oceancleaner-${AMBIENTE}"
 COMPOSE="docker compose -p ${PROJETO} -f docker-compose.deploy.yml --env-file .env"
+PREV_TAG="$(cat .deployed_tag 2>/dev/null || true)"
 
 echo ">> [${AMBIENTE}] Baixando imagens (tag ${IMAGE_TAG})..."
 $COMPOSE pull
@@ -23,10 +24,11 @@ $COMPOSE up -d --remove-orphans
 # e os dois microsserviços estão registrados no Eureka e acessíveis por ele.
 echo ">> [${AMBIENTE}] Aguardando a aplicação responder na porta ${GATEWAY_PORT}..."
 for i in $(seq 1 60); do
-  op=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${GATEWAY_PORT}/operacoes-ms/operacoes" || true)
-  vol=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${GATEWAY_PORT}/voluntarios-ms/voluntarios" || true)
+  op=$(curl -s -u "${API_USER}:${API_PASSWORD}" -o /dev/null -w '%{http_code}' "http://localhost:${GATEWAY_PORT}/operacoes-ms/operacoes" || true)
+  vol=$(curl -s -u "${API_USER}:${API_PASSWORD}" -o /dev/null -w '%{http_code}' "http://localhost:${GATEWAY_PORT}/voluntarios-ms/voluntarios" || true)
   if [ "$op" = "200" ] && [ "$vol" = "200" ]; then
     echo ">> [${AMBIENTE}] Deploy OK!"
+    echo "${IMAGE_TAG}" > .deployed_tag
     curl -s "http://localhost:${GATEWAY_PORT}/actuator/info"; echo
     $COMPOSE ps
     # Remove imagens antigas para não encher o disco
@@ -39,4 +41,8 @@ done
 echo ">> [${AMBIENTE}] FALHA: a aplicação não respondeu a tempo. Logs recentes:"
 $COMPOSE ps
 $COMPOSE logs --tail=50
+if [ -n "${PREV_TAG:-}" ] && [ "${PREV_TAG}" != "${IMAGE_TAG}" ]; then
+  echo ">> [${AMBIENTE}] Revertendo para ${PREV_TAG}..."
+  IMAGE_TAG="${PREV_TAG}" $COMPOSE up -d --remove-orphans
+fi
 exit 1
