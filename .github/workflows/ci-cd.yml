@@ -36,7 +36,7 @@ jobs:
           cache-dependency-path: ${{ matrix.service }}/pom.xml
 
       - name: Build e testes (mvn verify)
-        run: sh ./mvnw -B org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent verify org.jacoco:jacoco-maven-plugin:0.8.12:report
+        run: mvn -B org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent verify org.jacoco:jacoco-maven-plugin:0.8.12:report
 
       - name: Resumo dos testes
         if: always()
