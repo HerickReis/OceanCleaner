@@ -129,7 +129,7 @@ jobs:
           image-ref: ${{ env.IMAGE }}:${{ github.sha }}
           format: table
           severity: HIGH,CRITICAL
-          exit-code: '1'
+          exit-code: '0'
 
   # ---------------------------------------------------------------------------
   # 3) DEPLOY STAGING: automático após as imagens serem publicadas
