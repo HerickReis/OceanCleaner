@@ -65,6 +65,8 @@ Eureka com os 3 serviços registrados (gateway, operacoes-ms, voluntarios-ms): `
 
 Testes manuais de todos os endpoints: coleção Postman/Insomnia em `docs/postman/` (ver `docs/postman/README.md`).
 
+Testes automatizados de API: 45 cenários BDD (Gherkin/Cucumber + Rest Assured) em `api-tests/`, com validação de status code, corpo JSON e contrato JSON Schema de todos os endpoints, executados no job `api-tests` do pipeline contra o ambiente completo em `docker compose` (ver `api-tests/README.md`). Relatório Cucumber no artifact `api-tests-report`.
+
 Smoke `deploy.sh`: `GET /operacoes-ms/operacoes` + `GET /voluntarios-ms/voluntarios` = `200` via Gateway, senão logs + rollback `.deployed_tag`.
 
 ## 5. Desafios e soluções

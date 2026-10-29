@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Lista de operações",
+  "type": "array",
+  "items": {
+    "$ref": "operacao.json"
+  }
+}

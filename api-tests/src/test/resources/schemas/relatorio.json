@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Relatório de coleta (RelatorioColetaExibicaoDto)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "idOperacao",
+    "idVoluntario",
+    "nomeVoluntario",
+    "quantidadeResiduos",
+    "tipoResiduo",
+    "observacoes",
+    "dataRelatorio"
+  ],
+  "properties": {
+    "id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "idOperacao": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "idVoluntario": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "nomeVoluntario": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quantidadeResiduos": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tipoResiduo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observacoes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dataRelatorio": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    }
+  }
+}
