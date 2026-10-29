@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Operação de limpeza (OperacaoExibicaoDto)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "titulo",
+    "descricao",
+    "dataOperacao",
+    "status",
+    "idArea",
+    "nomeArea"
+  ],
+  "properties": {
+    "id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "titulo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "descricao": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dataOperacao": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "idArea": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "nomeArea": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Registro do Eureka (/eureka/apps)",
+  "type": "object",
+  "required": [
+    "applications"
+  ],
+  "properties": {
+    "applications": {
+      "type": "object",
+      "required": [
+        "application"
+      ],
+      "properties": {
+        "application": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "instance"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "instance": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "app",
+                    "status",
+                    "ipAddr"
+                  ],
+                  "properties": {
+                    "app": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "ipAddr": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

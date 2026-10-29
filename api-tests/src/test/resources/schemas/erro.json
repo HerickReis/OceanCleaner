@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Erro de negócio (404, 409, 502)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "erro"
+  ],
+  "properties": {
+    "erro": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

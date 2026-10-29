@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Actuator info do Gateway",
+  "type": "object",
+  "required": [
+    "app"
+  ],
+  "properties": {
+    "app": {
+      "type": "object",
+      "required": [
+        "name",
+        "environment",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
