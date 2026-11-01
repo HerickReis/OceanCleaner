@@ -338,5 +338,5 @@ Cenário: Rejeitar conclusão sem os dados da coleta
 - [x] Cenários BDD em Gherkin (positivos e negativos)
 - [x] Testes de API de todos os endpoints (status code, corpo JSON, contrato JSON Schema) executados no CI
 - [x] README.md com instruções e prints
-- [ ] Documentação técnica com evidências (PDF em `docs/ENTREGA.pdf`, gerar via pandoc)
-- [ ] Deploy realizado nos ambientes staging e produção (exige runner self-hosted)
+- [X] Documentação técnica com evidências (PDF em `docs/ENTREGA.pdf`, gerar via pandoc)
+- [X] Deploy realizado nos ambientes staging e produção (exige runner self-hosted)
