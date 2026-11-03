@@ -1,0 +1,31 @@
+$ gh run view 41266518830 --job 124730480825
+GitHub Actions • master • commit 73ea4dd
+
+  Dado que estou autenticado como administrador                                # br.com.fiap.apitests.steps.DadosSteps.autenticado()
+  E que existe uma área marítima cadastrada                                    # br.com.fiap.apitests.steps.DadosSteps.existeArea()
+  Dado que existe um voluntário cadastrado                                     # br.com.fiap.apitests.steps.DadosSteps.existeVoluntario()
+  E que existe uma operação "EM_ANDAMENTO" cadastrada nessa área               # br.com.fiap.apitests.steps.DadosSteps.existeOperacao(java.lang.String)
+  Quando envio um PUT para "/operacoes-ms/operacoes/{operacaoId}" com o corpo: # br.com.fiap.apitests.steps.ApiSteps.envioComCorpo(java.lang.String,java.lang.String,java.lang.String)
+  Então o status da resposta deve ser 200                                      # br.com.fiap.apitests.steps.ApiSteps.statusDeveSer(int)
+  E a resposta deve respeitar o contrato "operacao.json"                       # br.com.fiap.apitests.steps.ApiSteps.respeitaContrato(java.lang.String)
+  E a resposta deve conter:                                                    # br.com.fiap.apitests.steps.ApiSteps.respostaDeveConter(io.cucumber.datatable.DataTable)
+    | status | CONCLUIDA |
+  Quando envio um GET para "/voluntarios-ms/relatorios/operacao/{operacaoId}"  # br.com.fiap.apitests.steps.ApiSteps.envioSemCorpo(java.lang.String,java.lang.String)
+  Então o status da resposta deve ser 200                                      # br.com.fiap.apitests.steps.ApiSteps.statusDeveSer(int)
+  E a resposta deve respeitar o contrato "relatorio-lista.json"                # br.com.fiap.apitests.steps.ApiSteps.respeitaContrato(java.lang.String)
+  E a lista da resposta deve ter 1 item                                        # br.com.fiap.apitests.steps.ApiSteps.listaTamanho(int)
+
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 45, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:37 min
+[INFO] Finished at: 2026-11-01T02:50:57Z
+[INFO] ------------------------------------------------------------------------
+Relatório: /home/runner/work/OceanCleaner/OceanCleaner/api-tests/target/cucumber-report.html
+- cenários: 45 | sucesso: 45 | falhas: 0 | ignorados: 0
+Artifact: api-tests-report (cucumber-report.html, cucumber.json, cucumber.xml)

@@ -1,0 +1,14 @@
+Suíte: api-tests
+Workflow: CI/CD - Ocean Cleaner
+Run: 41266518830
+Job: Testes de API (BDD + contrato) - 124730480825
+Commit: 73ea4dd (master)
+Data: 2026-11-01T02:46:48Z a 2026-11-01T02:51:06Z
+Testes: 45
+Falhas: 0
+Erros: 0
+Ignorados: 0
+Duração Cucumber (XML): 90.426s
+Duração Maven (log): 90,93s
+Duração do job: 4m18s
+Artifact: api-tests-report
